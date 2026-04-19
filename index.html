@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>John & Celeste: El Reencuentro</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -17,6 +18,7 @@
       margin: 0;
       font-family: 'Press Start 2P', cursive;
       overflow: hidden;
+      touch-action: manipulation;
     }
 
     #game-container {
@@ -28,6 +30,8 @@
     canvas {
       display: block;
       background: linear-gradient(to bottom, #020814, #0a1a33);
+      max-width: 100vw;
+      height: auto;
     }
 
     .ui-layer {
@@ -79,6 +83,55 @@
     button:hover {
       background: #00ccff;
     }
+
+    /* ESTILOS DE LOS BOTONES MÓVILES */
+    .mobile-controls {
+      display: flex;
+      width: 100%;
+      max-width: 800px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .d-pad {
+      display: flex;
+      gap: 15px;
+    }
+
+    .m-btn {
+      width: 65px;
+      height: 65px;
+      background: #1e90ff;
+      border: 4px solid #fff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 5px #0055aa;
+    }
+
+    .m-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px #0055aa;
+      background: #00ccff;
+    }
+
+    .jump-btn {
+      width: 100px;
+      background: #ff0080;
+      box-shadow: 0 5px #aa0055;
+    }
+
+    .jump-btn:active {
+      box-shadow: 0 1px #aa0055;
+      background: #ff4fa3;
+    }
   </style>
 </head>
 
@@ -106,6 +159,14 @@
     </div>
   </div>
 
+  <div class="mobile-controls">
+    <div class="d-pad">
+      <div class="m-btn" id="leftBtn">◀</div>
+      <div class="m-btn" id="rightBtn">▶</div>
+    </div>
+    <div class="m-btn jump-btn" id="jumpBtn">SALTAR</div>
+  </div>
+
   <script>
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
@@ -123,14 +184,12 @@
       w: 24, h: 40, onGround: false, facing: 1
     };
 
-    // Celeste al final de un nivel mucho más largo
     const celeste = {
       x: 3500, y: 240,
       w: 24, h: 42,
       color: "#ff4fa3"
     };
 
-    // Nivel extendido
     const platforms = [
       { x: 0, y: 320, w: 300, h: 80 },
       { x: 400, y: 260, w: 150, h: 25 },
@@ -146,7 +205,6 @@
       { x: 3300, y: 300, w: 400, h: 100 }
     ];
 
-    // Pinchos Rojos
     const spikes = [
       { x: 120, y: 310, w: 60 },
       { x: 1000, y: 270, w: 80 },
@@ -154,7 +212,6 @@
       { x: 3400, y: 290, w: 100 }
     ];
 
-    // Palomas Peligrosas
     const pigeons = [
       { x: 500, y: 120, startX: 500, range: 150 },
       { x: 1300, y: 80, startX: 1300, range: 200 },
@@ -165,6 +222,22 @@
     const keys = {};
     window.onkeydown = (e) => keys[e.code] = true;
     window.onkeyup = (e) => keys[e.code] = false;
+
+    // Lógica para botones móviles
+    const setupMobileBtn = (id, keyCode) => {
+      const btn = document.getElementById(id);
+      const press = (e) => { e.preventDefault(); keys[keyCode] = true; };
+      const release = (e) => { e.preventDefault(); keys[keyCode] = false; };
+
+      btn.addEventListener('touchstart', press);
+      btn.addEventListener('touchend', release);
+      btn.addEventListener('mousedown', press);
+      btn.addEventListener('mouseup', release);
+    };
+
+    setupMobileBtn('leftBtn', 'ArrowLeft');
+    setupMobileBtn('rightBtn', 'ArrowRight');
+    setupMobileBtn('jumpBtn', 'Space');
 
     function update() {
       if (!isRunning) return;
@@ -181,7 +254,6 @@
       john.x += john.vx;
       john.y += john.vy;
 
-      // Colisiones con plataformas
       john.onGround = false;
       platforms.forEach(p => {
         if (john.x + john.w > p.x && john.x < p.x + p.w &&
@@ -192,14 +264,12 @@
         }
       });
 
-      // Colisión con Pinchos
       spikes.forEach(s => {
         if (john.x + john.w > s.x && john.x < s.x + s.w && john.y + john.h > s.y && john.y < s.y + 15) {
           respawn();
         }
       });
 
-      // Colisión y Movimiento de Palomas
       pigeons.forEach(p => {
         p.x = p.startX + Math.sin(Date.now() * 0.002) * p.range;
         if (john.x + john.w > p.x && john.x < p.x + 30 && john.y + john.h > p.y && john.y < p.y + 20) {
@@ -207,14 +277,11 @@
         }
       });
 
-      // Condición de Victoria
       let dist = Math.sqrt(Math.pow(john.x - celeste.x, 2) + Math.pow(john.y - celeste.y, 2));
       if (dist < 40) victory();
 
-      // Muerte por agua
       if (john.y > canvas.height) respawn();
 
-      // Cámara suave
       let targetCam = john.x - canvas.width / 3;
       cameraX += (targetCam - cameraX) * 0.1;
       if (cameraX < 0) cameraX = 0;
@@ -230,7 +297,6 @@
         isRunning = false;
         gameOverScreen.style.display = 'flex';
       } else {
-        // Teletransportar un poco atrás para seguridad
         john.x -= 150;
         if (john.x < 50) john.x = 50;
         john.y = 100; john.vx = 0; john.vy = 0;
@@ -243,7 +309,7 @@
     }
 
     function resetGame() {
-      location.reload(); // Forma más limpia de resetear un nivel complejo
+      location.reload();
     }
 
     function draw() {
@@ -251,14 +317,12 @@
       ctx.save();
       ctx.translate(-cameraX, 0);
 
-      // Agua
       ctx.fillStyle = '#1e90ff';
       ctx.globalAlpha = 0.5;
       let wave = Math.sin(Date.now() * 0.003) * 5;
       ctx.fillRect(cameraX, 365 + wave, canvas.width + 100, 40);
       ctx.globalAlpha = 1;
 
-      // Plataformas
       platforms.forEach(p => {
         ctx.fillStyle = '#0044cc';
         ctx.fillRect(p.x, p.y, p.w, p.h);
@@ -266,7 +330,6 @@
         ctx.fillRect(p.x, p.y, p.w, 4);
       });
 
-      // Pinchos Rojos (Dibujados como triángulos)
       ctx.fillStyle = '#ff0000';
       spikes.forEach(s => {
         for (let i = 0; i < s.w; i += 20) {
@@ -278,7 +341,6 @@
         }
       });
 
-      // Palomas (Cuerpos grises con alas blancas parpadeantes)
       ctx.fillStyle = '#888888';
       pigeons.forEach(p => {
         ctx.fillRect(p.x, p.y, 30, 15);
@@ -288,7 +350,6 @@
         ctx.fillStyle = '#888888';
       });
 
-      // Celeste
       ctx.fillStyle = celeste.color;
       ctx.shadowBlur = 15;
       ctx.shadowColor = "#ff0080";
@@ -298,7 +359,6 @@
       ctx.font = "8px 'Press Start 2P'";
       ctx.fillText("CELESTE", celeste.x - 10, celeste.y - 20);
 
-      // John
       ctx.fillStyle = '#ffcc00';
       ctx.fillRect(john.x, john.y, john.w, john.h);
       ctx.fillStyle = '#000';
